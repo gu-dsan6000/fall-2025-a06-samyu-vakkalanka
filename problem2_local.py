@@ -136,19 +136,20 @@ def create_bar_chart(cluster_summary):
     # Create figure and axis
     fig, ax = plt.subplots()
     
-    # Create bar chart
-    bars = ax.bar(
-        range(len(df)), 
-        df['num_applications'],
-        color=sns.color_palette('husl', len(df))
+    # Create bar chart using seaborn
+    sns.barplot(
+        data=df,
+        x='cluster_id',
+        y='num_applications',
+        ax=ax
     )
     
     # Add value labels on top of bars
-    for i, (bar, value) in enumerate(zip(bars, df['num_applications'])):
+    for i, (idx, row) in enumerate(df.iterrows()):
         ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 1,
-            str(value),
+            i,
+            row['num_applications'] + 1,
+            str(row['num_applications']),
             ha='center',
             va='bottom'
         )
@@ -158,10 +159,8 @@ def create_bar_chart(cluster_summary):
     ax.set_ylabel('Number of Applications')
     ax.set_title('Number of Applications per Cluster')
     
-    # Set x-axis labels to cluster IDs
-    ax.set_xticks(range(len(df)))
-    ax.set_xticklabels(df['cluster_id'], rotation=45, ha='right')
-    
+    # Rotate x-axis labels
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
     
     # Adjust layout to prevent label cutoff
     plt.tight_layout()
@@ -169,7 +168,6 @@ def create_bar_chart(cluster_summary):
     # Save the figure
     output_file = 'data/output/problem2_bar_chart_local.png'
     plt.savefig(output_file)
-    
     plt.close()
 
 def create_density_plot(timeline, cluster_summary):
@@ -201,7 +199,7 @@ def create_density_plot(timeline, cluster_summary):
     # Create figure and axis
     fig, ax = plt.subplots()
     
-    # Create histogram with KDE overlay
+    # Create histogram with KDE overlay using seaborn
     sns.histplot(
         data=cluster_data,
         x='duration_minutes',
