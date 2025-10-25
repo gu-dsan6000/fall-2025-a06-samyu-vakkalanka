@@ -70,6 +70,9 @@ def parse_logs_with_ids(logs_df):
         col('container_id'),
         col('file_path')
     )
+    parsed_logs = parsed_logs.filter(col("log_level").isNotNull())
+    parsed_logs = parsed_logs.filter(col('log_level') != '')
+
     parsed_logs = parsed_logs.withColumn(
         'timestamp',
         when(col('timestamp_str') != '', to_timestamp('timestamp_str', 'yy/MM/dd HH:mm:ss'))
@@ -194,8 +197,12 @@ def create_density_plot(timeline_df, cluster_summary_df):
     cluster_data = timeline_df[timeline_df['cluster_id'] == largest_cluster_id].copy()
     
     # Convert timestamps to datetime
-    cluster_data['start_time'] = pd.to_datetime(cluster_data['start_time'], format='%y/%m/%d %H:%M:%S')
-    cluster_data['end_time'] = pd.to_datetime(cluster_data['end_time'], format='%y/%m/%d %H:%M:%S')
+    try:
+        cluster_data['start_time'] = pd.to_datetime(cluster_data['start_time'])
+        cluster_data['end_time'] = pd.to_datetime(cluster_data['end_time'])
+    except:
+        # Already datetime
+        pass
     
     # Calculate duration in minutes
     cluster_data['duration_minutes'] = (
@@ -323,7 +330,7 @@ def main():
     try:
         # Get bar chart
         cluster_summary_df = cluster_summary.toPandas()
-        create_bar_chart(cluster_summary)
+        create_bar_chart(cluster_summary_df)
     except Exception as e:
         print(f"Error creating bar chart: {str(e)}")
         success = False
