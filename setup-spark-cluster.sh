@@ -11,19 +11,9 @@
 #   LAPTOP_IP: Your laptop's public IP address (get from https://ipchicken.com/)
 #
 # Example: ./setup-spark-cluster.sh 123.45.67.89
-#
-# Logs are saved to: cluster-setup.log
 ################################################################################
 
 set -e  # Exit on any error
-
-# Setup logging
-LOG_FILE="cluster-setup-$(date +%Y%m%d-%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
-
-echo "Logging to: $LOG_FILE"
-echo "Started at: $(date)"
-echo ""
 
 # Colors for output
 RED='\033[0;31m'
@@ -55,9 +45,6 @@ log_step() {
     echo -e "${GREEN}$1${NC}"
     echo -e "${GREEN}========================================${NC}"
 }
-
-# Trap errors and log them
-trap 'log_error "Script failed at line $LINENO. Check $LOG_FILE for details."' ERR
 
 # Check if laptop IP is provided
 if [ $# -ne 1 ]; then
@@ -548,37 +535,30 @@ ssh $SSH_OPTS ubuntu@$MASTER_PUBLIC_IP 'bash -s' <<'MASTER_SETUP'
 set -e
 
 echo "[Master Setup] Installing system packages..."
-sudo apt update -qq || { echo "ERROR: apt update failed"; exit 1; }
-sudo apt install -y openjdk-17-jdk-headless python3-pip python3-venv curl unzip wget 2>&1 | grep -v "^Selecting\|^Preparing\|^Unpacking" || true
+sudo apt update -qq
+sudo apt install -y openjdk-17-jdk-headless python3-pip python3-venv curl unzip > /dev/null 2>&1
 
 echo "[Master Setup] Installing uv..."
-curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | grep -v "^Downloading\|^Installing" || true
+curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "[Master Setup] Installing Python dependencies..."
-cd ~/spark-cluster || { echo "ERROR: spark-cluster directory not found"; exit 1; }
-uv sync 2>&1 | tail -5
+cd ~/spark-cluster
+uv sync > /dev/null 2>&1
 
-echo "[Master Setup] Downloading Spark 3.4.4..."
-cd ~ || exit 1
-echo "  - Downloading from Apache archive..."
-wget --progress=bar:force:noscroll https://archive.apache.org/dist/spark/spark-3.4.4/spark-3.4.4-bin-hadoop3.tgz 2>&1 | tail -3
-if [ ! -f spark-3.4.4-bin-hadoop3.tgz ]; then
-    echo "ERROR: Failed to download Spark 3.4.4"
-    exit 1
-fi
+echo "[Master Setup] Downloading Spark 4.0.1..."
+cd ~
+wget -q https://downloads.apache.org/spark/spark-4.0.1/spark-4.0.1-bin-hadoop3.tgz
+tar -xzf spark-4.0.1-bin-hadoop3.tgz
+mv spark-4.0.1-bin-hadoop3 spark
+rm spark-4.0.1-bin-hadoop3.tgz
 
-echo "  - Extracting..."
-tar -xzf spark-3.4.4-bin-hadoop3.tgz || { echo "ERROR: Failed to extract Spark"; exit 1; }
-mv spark-3.4.4-bin-hadoop3 spark || { echo "ERROR: Failed to rename Spark directory"; exit 1; }
-rm spark-3.4.4-bin-hadoop3.tgz
-
-echo "[Master Setup] Downloading AWS JARs (Hadoop 3.3.4 for Spark 3.4.4)..."
-cd ~/spark/jars || { echo "ERROR: spark/jars directory not found"; exit 1; }
-echo "  - Downloading hadoop-aws 3.3.4..."
-wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar || { echo "ERROR: Failed to download hadoop-aws"; exit 1; }
-echo "  - Downloading aws-java-sdk-bundle 1.12.262..."
-wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar || { echo "ERROR: Failed to download aws-java-sdk-bundle"; exit 1; }
+echo "[Master Setup] Downloading AWS JARs..."
+cd ~/spark/jars
+wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar
+wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.29.27/bundle-2.29.27.jar
+wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/url-connection-client/2.29.27/url-connection-client-2.29.27.jar
 
 echo "[Master Setup] Configuring environment variables..."
 cat >> ~/.bashrc <<'EOF'
@@ -617,32 +597,30 @@ set -e
 WORKER_NUM=$1
 
 echo "[Worker $WORKER_NUM Setup] Installing system packages..."
-sudo apt update -qq || { echo "ERROR: apt update failed"; exit 1; }
-sudo apt install -y openjdk-17-jdk-headless python3-pip python3-venv curl unzip wget 2>&1 | grep -v "^Selecting\|^Preparing\|^Unpacking" || true
+sudo apt update -qq
+sudo apt install -y openjdk-17-jdk-headless python3-pip python3-venv curl unzip > /dev/null 2>&1
 
 echo "[Worker $WORKER_NUM Setup] Installing uv..."
-curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | grep -v "^Downloading\|^Installing" || true
+curl -LsSf https://astral.sh/uv/install.sh | sh > /dev/null 2>&1
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "[Worker $WORKER_NUM Setup] Installing Python dependencies..."
-cd ~/spark-cluster || { echo "ERROR: spark-cluster directory not found"; exit 1; }
-uv sync 2>&1 | tail -5
+cd ~/spark-cluster
+uv sync > /dev/null 2>&1
 
-echo "[Worker $WORKER_NUM Setup] Downloading Spark 3.4.4..."
-cd ~ || exit 1
-wget --progress=bar:force:noscroll https://archive.apache.org/dist/spark/spark-3.4.4/spark-3.4.4-bin-hadoop3.tgz 2>&1 | tail -3
-if [ ! -f spark-3.4.4-bin-hadoop3.tgz ]; then
-    echo "ERROR: Failed to download Spark 3.4.4"
-    exit 1
-fi
-tar -xzf spark-3.4.4-bin-hadoop3.tgz || { echo "ERROR: Failed to extract Spark"; exit 1; }
-mv spark-3.4.4-bin-hadoop3 spark || { echo "ERROR: Failed to rename Spark directory"; exit 1; }
-rm spark-3.4.4-bin-hadoop3.tgz
+echo "[Worker $WORKER_NUM Setup] Downloading Spark 4.0.1..."
+cd ~
+wget -q https://downloads.apache.org/spark/spark-4.0.1/spark-4.0.1-bin-hadoop3.tgz
+tar -xzf spark-4.0.1-bin-hadoop3.tgz
+mv spark-4.0.1-bin-hadoop3 spark
+rm spark-4.0.1-bin-hadoop3.tgz
 
-echo "[Worker $WORKER_NUM Setup] Downloading AWS JARs (Hadoop 3.3.4 for Spark 3.4.4)..."
-cd ~/spark/jars || { echo "ERROR: spark/jars directory not found"; exit 1; }
-wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar || { echo "ERROR: Failed to download hadoop-aws"; exit 1; }
-wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar || { echo "ERROR: Failed to download aws-java-sdk-bundle"; exit 1; }
+echo "[Worker $WORKER_NUM Setup] Downloading AWS JARs..."
+cd ~/spark/jars
+wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar
+wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.29.27/bundle-2.29.27.jar
+wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/url-connection-client/2.29.27/url-connection-client-2.29.27.jar
 
 echo "[Worker $WORKER_NUM Setup] Configuring environment variables..."
 cat >> ~/.bashrc <<EOF
@@ -663,7 +641,6 @@ WORKER_SETUP
     log_success "Worker $WORKER_NUM configured"
 }
 
-# Setup workers sequentially to avoid wait/SSH heredoc hang issue
 setup_worker 1 $WORKER1_PUBLIC_IP
 setup_worker 2 $WORKER2_PUBLIC_IP
 setup_worker 3 $WORKER3_PUBLIC_IP
@@ -736,7 +713,6 @@ WORKER_SPARK_CONFIG
     log_success "Spark configured on Worker $WORKER_NUM"
 }
 
-# Configure workers sequentially to avoid wait/SSH heredoc hang issue
 configure_worker_spark 1 $WORKER1_PUBLIC_IP
 configure_worker_spark 2 $WORKER2_PUBLIC_IP
 configure_worker_spark 3 $WORKER3_PUBLIC_IP
@@ -750,7 +726,6 @@ log_success "Spark configured on all workers"
 log_step "Part 11: Setting Up SSH Keys for Passwordless Access"
 
 log_info "Copying SSH key to master node..."
-ssh $SSH_OPTS ubuntu@$MASTER_PUBLIC_IP "mkdir -p ~/.ssh && chmod 700 ~/.ssh" 2>/dev/null
 scp $SSH_OPTS $KEY_FILE ubuntu@$MASTER_PUBLIC_IP:~/.ssh/ 2>/dev/null
 ssh $SSH_OPTS ubuntu@$MASTER_PUBLIC_IP "chmod 400 ~/.ssh/$KEY_FILE" 2>/dev/null
 log_success "SSH key copied to master"
@@ -874,12 +849,4 @@ echo "   aws ec2 terminate-instances --instance-ids \$MASTER_INSTANCE_ID \$WORKE
 echo "   aws ec2 delete-security-group --group-id \$SPARK_SG_ID --region \$AWS_REGION"
 echo "   aws ec2 delete-key-pair --key-name \$KEY_NAME --region \$AWS_REGION"
 echo ""
-echo "=================================================="
-echo "           LOG FILE"
-echo "=================================================="
-echo ""
-echo "Full setup log saved to: $LOG_FILE"
-echo "If you encounter issues, check this log file for detailed error messages."
-echo ""
 log_success "Setup script completed successfully!"
-log_info "Total setup time: $((SECONDS / 60)) minutes $((SECONDS % 60)) seconds"
