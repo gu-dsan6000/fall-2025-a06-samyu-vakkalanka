@@ -99,7 +99,7 @@ def create_timeline(parsed_logs):
         max('timestamp').alias('end_time')
     ).orderBy('cluster_id', 'app_number')
 
-    output_file = 'data/output/problem2_timeline.csv'
+    output_file = 'problem2_timeline.csv'
     timeline.toPandas().to_csv(output_file, index=False)
     return timeline
 
@@ -112,7 +112,7 @@ def create_cluster_summary(timeline):
         max('end_time').alias('cluster_last_app')
     ).orderBy(col('num_applications').desc())
     
-    output_file = 'data/output/problem2_cluster_summary.csv'
+    output_file = 'problem2_cluster_summary.csv'
     cluster_summary.toPandas().to_csv(output_file, index=False)
     
     return cluster_summary
@@ -138,7 +138,7 @@ def get_stats(cluster_summary):
         stats_lines.append(f"  Cluster {row['cluster_id']}: {row['num_applications']} applications")
     
     # Write to file
-    output_file = 'data/output/problem2_stats.txt'
+    output_file = 'problem2_stats.txt'
     with open(output_file, 'w') as f:
         f.write('\n'.join(stats_lines))
         
@@ -180,7 +180,7 @@ def create_bar_chart(df):
     plt.tight_layout()
     
     # Save the figure
-    output_file = 'data/output/problem2_bar_chart.png'
+    output_file = 'problem2_bar_chart.png'
     plt.savefig(output_file)
     plt.close()
     
@@ -231,7 +231,7 @@ def create_density_plot(timeline_df, cluster_summary_df):
     plt.tight_layout()
     
     # Save the figure
-    output_file = 'data/output/problem2_density_plot.png'
+    output_file = 'problem2_density_plot.png'
     plt.savefig(output_file)
     
     plt.close()
@@ -246,12 +246,12 @@ def main():
     args = parser.parse_args()
     if args.skip_spark:
         try:
-            timeline_file = 'data/output/problem2_timeline.csv'
+            timeline_file = 'problem2_timeline.csv'
             timeline = pd.read_csv(timeline_file)
             timeline['start_time'] = pd.to_datetime(timeline['start_time'], format="%Y-%m-%d %H:%M:%S")
             timeline['end_time'] = pd.to_datetime(timeline['end_time'], format="%Y-%m-%d %H:%M:%S")
 
-            summary_file = 'data/output/problem2_cluster_summary.csv'
+            summary_file = 'problem2_cluster_summary.csv'
             cluster_summary = pd.read_csv(summary_file)
             cluster_summary['cluster_first_app'] = pd.to_datetime(cluster_summary['cluster_first_app'], format="%Y-%m-%d %H:%M:%S")
             cluster_summary['cluster_last_app'] = pd.to_datetime(cluster_summary['cluster_last_app'], format="%Y-%m-%d %H:%M:%S")

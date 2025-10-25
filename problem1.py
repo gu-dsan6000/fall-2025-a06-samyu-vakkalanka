@@ -62,14 +62,14 @@ def level_counts(parsed_logs):
         .groupBy('level')
         .count()
     )
-    output_file = 'data/output/problem1_counts_local.csv'
+    output_file = 'problem1_counts.csv'
     log_level_counts.toPandas().to_csv(output_file, index=False)
 
 def get_random(parsed_logs):
     # Get random sample of 10 rows from parsed df
     random_sample = parsed_logs[['message', 'level']].sample(withReplacement=False, fraction=(10/parsed_logs.count()))
-    random_sample = random_sample.withColumnRenamed("message", "log_entry").withColumnRenamed("level", "log_level").limit(10)
-    output_file = 'data/output/problem1_sample_local.csv'
+    random_sample = parsed_logs[['message', 'level']].sample(withReplacement=False, fraction=0.01).limit(10)
+    output_file = 'problem1_sample.csv'
     random_sample.toPandas().to_csv(output_file, index=False)
 
 def get_summary(total_lines, total_with_levels, unique_levels, parsed_logs):
@@ -97,7 +97,7 @@ def get_summary(total_lines, total_with_levels, unique_levels, parsed_logs):
         summary_lines.append(f"  {level:<6}: {count:>12,} ({percentage:>6.2f}%)")
     
     # Write to file
-    output_file = 'data/output/problem1_summary_local.txt'
+    output_file = 'problem1_summary.txt'
     with open(output_file, 'w') as f:
         f.write('\n'.join(summary_lines))
 

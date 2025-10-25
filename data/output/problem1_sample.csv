@@ -1,0 +1,11 @@
+message,level
+17/06/08 19:01:09 INFO executor.Executor: Running task 38.0 in stage 1.0 (TID 78),INFO
+17/06/08 19:01:09 INFO storage.BlockManager: Found block rdd_2_30 locally,INFO
+17/06/08 19:01:10 INFO executor.Executor: Running task 6.0 in stage 4.0 (TID 167),INFO
+17/06/08 19:01:10 INFO executor.CoarseGrainedExecutorBackend: Got assigned task 199,INFO
+17/06/08 19:01:11 INFO storage.BlockManager: Found block rdd_2_38 locally,INFO
+17/06/08 19:01:12 INFO executor.Executor: Running task 6.0 in stage 12.0 (TID 484),INFO
+17/06/08 19:01:12 INFO storage.BlockManager: Found block rdd_2_6 locally,INFO
+17/06/08 19:01:12 INFO executor.CoarseGrainedExecutorBackend: Got assigned task 582,INFO
+17/06/08 19:01:12 INFO executor.Executor: Running task 30.0 in stage 15.0 (TID 628),INFO
+17/06/08 19:01:12 INFO storage.BlockManager: Found block rdd_2_14 locally,INFO
