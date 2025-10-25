@@ -1,9 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import to_timestamp, input_file_name, regexp_extract, col, count, min, max
+from pyspark.sql.functions import to_timestamp, input_file_name, regexp_extract, col, count, min, max, when
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import sys
+import argparse
 
 
 def create_spark_session():
@@ -49,13 +50,19 @@ def parse_logs_with_ids(logs_df):
     
     # Parse the log content itself
     parsed_logs = logs_with_ids.select(
-        regexp_extract('value', r'^(\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})', 1).alias('timestamp'),
+        regexp_extract('value', r'^(\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})', 1).alias('timestamp_str'),
         regexp_extract('value', r'(INFO|WARN|ERROR|DEBUG)', 1).alias('log_level'),
         regexp_extract('value', r'(INFO|WARN|ERROR|DEBUG)\s+([^:]+):', 2).alias('component'),
         col('value').alias('message'),
         col('application_id'),
         col('container_id'),
         col('file_path')
+    )
+
+    parsed_logs = parsed_logs.withColumn(
+        'timestamp',
+        when(col('timestamp_str') != '', to_timestamp('timestamp_str', 'yy/MM/dd HH:mm:ss'))
+        .otherwise(None)
     )
     
     # Extract cluster_id from application_id (the first part before the underscore)
@@ -124,12 +131,8 @@ def get_stats(cluster_summary):
     with open(output_file, 'w') as f:
         f.write('\n'.join(stats_lines))
 
-def create_bar_chart(cluster_summary):
+def create_bar_chart(df):
     """Create bar chart showing number of applications per cluster."""
-    
-    # Convert to pandas
-    df = cluster_summary.toPandas()
-    
     # Sort by number of applications descending
     df = df.sort_values('num_applications', ascending=False)
     
@@ -170,13 +173,8 @@ def create_bar_chart(cluster_summary):
     plt.savefig(output_file)
     plt.close()
 
-def create_density_plot(timeline, cluster_summary):
+def create_density_plot(timeline_df, cluster_summary_df):
     """Create density plot showing job duration distribution for the largest cluster."""
-    
-    # Convert to pandas
-    timeline_df = timeline.toPandas()
-    cluster_summary_df = cluster_summary.toPandas()
-    
     # Find the cluster with the most applications
     largest_cluster = cluster_summary_df.sort_values('num_applications', ascending=False).iloc[0]
     largest_cluster_id = largest_cluster['cluster_id']
@@ -228,10 +226,34 @@ def create_density_plot(timeline, cluster_summary):
     plt.close()
 
 def main():
+    parser = argparse.ArgumentParser(description='Process Spark cluster logs')
+    parser.add_argument('--skip-spark', action='store_true', help='Skip Spark processing and use existing CSVs')
+    
+    args = parser.parse_args()
+    if args.skip_spark:
+        try:
+            timeline_file = 'data/output/problem2_timeline_local.csv'
+            timeline = pd.read_csv(timeline_file)
+            timeline['start_time'] = pd.to_datetime(timeline['start_time'], format="%Y-%m-%d %H:%M:%S")
+            timeline['end_time'] = pd.to_datetime(timeline['end_time'], format="%Y-%m-%d %H:%M:%S")
+
+            summary_file = 'data/output/problem2_cluster_summary_local.csv'
+            cluster_summary = pd.read_csv(summary_file)
+            cluster_summary['cluster_first_app'] = pd.to_datetime(cluster_summary['cluster_first_app'], format="%Y-%m-%d %H:%M:%S")
+            cluster_summary['cluster_last_app'] = pd.to_datetime(cluster_summary['cluster_last_app'], format="%Y-%m-%d %H:%M:%S")
+
+            create_bar_chart(cluster_summary)
+            create_density_plot(timeline, cluster_summary)
+            return 0
+        
+        except Exception as e:
+            print(f"Error generating visualizations: {str(e)}")
+            return 1
+    
     spark = create_spark_session()
     try:
         # Load all log files
-        logs_df = spark.read.text("data/sample/*.log")
+        logs_df = spark.read.text("data/sample/*/*.log")
         success = True
     
     except Exception as e:
@@ -267,15 +289,17 @@ def main():
         success = False
     
     try:
-        # Get stats
+        # Get bar chart
+        cluster_summary_df = cluster_summary.toPandas()
         create_bar_chart(cluster_summary)
     except Exception as e:
         print(f"Error creating bar chart: {str(e)}")
         success = False
     
     try:
-        # Get stats
-        create_density_plot(timeline, cluster_summary)
+        # Get density plot
+        timeline_df = timeline.toPandas()
+        create_density_plot(timeline_df, cluster_summary_df)
     except Exception as e:
         print(f"Error creating density plot: {str(e)}")
         success = False

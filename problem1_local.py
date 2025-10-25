@@ -37,6 +37,8 @@ def parse_logs(log_text):
         regexp_extract('value', r'(INFO|WARN|ERROR|DEBUG)\s+([^:]+):', 2).alias('component'),
         col('value').alias('message')
     )
+    parsed_logs = parsed_logs.filter(col("level").isNotNull())
+    parsed_logs = parsed_logs.filter(col('level') != '')
     return parsed_logs
 
 def level_counts(parsed_logs):
@@ -44,7 +46,6 @@ def level_counts(parsed_logs):
     # Analyze log levels
     log_level_counts = (
         parsed_logs
-        .filter(col('level') != '')
         .groupBy('level')
         .count()
     )
@@ -53,18 +54,16 @@ def level_counts(parsed_logs):
 
 def get_random(parsed_logs):
     # Get random sample of 10 rows from parsed df
-    random_sample = parsed_logs[['value', 'level']].sample(withReplacement=False, fraction=(10/parsed_logs.count()))
-    random_sample = random_sample.withColumnRenamed("value", "log_entry").withColumnRenamed("level", "log_level")
+    random_sample = parsed_logs[['message', 'level']].sample(withReplacement=False, fraction=(10/parsed_logs.count()))
+    random_sample = random_sample.withColumnRenamed("message", "log_entry").withColumnRenamed("level", "log_level").limit(10)
     output_file = 'data/output/problem1_sample_local.csv'
     random_sample.toPandas().to_csv(output_file, index=False)
 
 def get_summary(total_lines, total_with_levels, unique_levels, parsed_logs):
     # Construct summary from log data
-
     # Group parsed logs by level and count 
     level_distribution = (
         parsed_logs
-        .filter(col('level') != '')
         .groupBy('level')
         .count()
         .orderBy('count', ascending=False)
@@ -94,7 +93,7 @@ def main():
     spark = create_spark_session()
     # Load all log files
     try:
-        logs_df = spark.read.text("data/sample/*.log")
+        logs_df = spark.read.text("data/sample/*/*.log")
         total_lines = logs_df.count()
         success = True
 
@@ -105,8 +104,8 @@ def main():
     # Parse log files
     try:
         parsed_logs = parse_logs(logs_df)
-        total_with_levels = parsed_logs.filter(col('level') != '').count()
-        unique_levels = parsed_logs.filter(col('level') != '').select('level').distinct().count()
+        total_with_levels = parsed_logs.count()
+        unique_levels = parsed_logs.select('level').distinct().count()
     except Exception as e:
         print(f"Error parsing log files: {str(e)}")
         success = False

@@ -50,6 +50,8 @@ def parse_logs(log_text):
         regexp_extract('value', r'(INFO|WARN|ERROR|DEBUG)\s+([^:]+):', 2).alias('component'),
         col('value').alias('message')
     )
+    parsed_logs = parsed_logs.filter(col("level").isNotNull())
+    parsed_logs = parsed_logs.filter(col('level') != '')
     return parsed_logs
 
 def level_counts(parsed_logs):
@@ -57,27 +59,24 @@ def level_counts(parsed_logs):
     # Analyze log levels
     log_level_counts = (
         parsed_logs
-        .filter(col('level') != '')
         .groupBy('level')
         .count()
     )
-    output_file = 'data/output/problem1_count.csv'
+    output_file = 'data/output/problem1_counts_local.csv'
     log_level_counts.toPandas().to_csv(output_file, index=False)
 
 def get_random(parsed_logs):
     # Get random sample of 10 rows from parsed df
-    random_sample = parsed_logs[['value', 'level']].sample(withReplacement=False, fraction=(10/parsed_logs.count()))
-    random_sample = random_sample.withColumnRenamed("value", "log_entry").withColumnRenamed("level", "log_level")
-    output_file = 'data/output/problem1_sample.csv'
+    random_sample = parsed_logs[['message', 'level']].sample(withReplacement=False, fraction=(10/parsed_logs.count()))
+    random_sample = random_sample.withColumnRenamed("message", "log_entry").withColumnRenamed("level", "log_level").limit(10)
+    output_file = 'data/output/problem1_sample_local.csv'
     random_sample.toPandas().to_csv(output_file, index=False)
 
 def get_summary(total_lines, total_with_levels, unique_levels, parsed_logs):
     # Construct summary from log data
-
     # Group parsed logs by level and count 
     level_distribution = (
         parsed_logs
-        .filter(col('level') != '')
         .groupBy('level')
         .count()
         .orderBy('count', ascending=False)
@@ -98,7 +97,7 @@ def get_summary(total_lines, total_with_levels, unique_levels, parsed_logs):
         summary_lines.append(f"  {level:<6}: {count:>12,} ({percentage:>6.2f}%)")
     
     # Write to file
-    output_file = 'data/output/problem1_summary.txt'
+    output_file = 'data/output/problem1_summary_local.txt'
     with open(output_file, 'w') as f:
         f.write('\n'.join(summary_lines))
 
@@ -120,7 +119,8 @@ def main():
 
     # Load all log files
     try:
-        logs_df = spark.read.text("data/raw/*.log")
+        s3_path = "s3a://spv15-assignment-spark-cluster-logs/data/*/*.log"
+        logs_df = spark.read.text(s3_path)
         total_lines = logs_df.count()
         success = True
 

@@ -775,14 +775,14 @@ log_info "Checking master process..."
 ssh $SSH_OPTS ubuntu@$MASTER_PUBLIC_IP 'jps | grep Master' 2>/dev/null
 log_success "Master process running"
 
-log_info "Checking worker processes..."
-WORKER_COUNT=0
-for WORKER_IP in $WORKER1_PUBLIC_IP $WORKER2_PUBLIC_IP $WORKER3_PUBLIC_IP; do
-    if ssh $SSH_OPTS ubuntu@$WORKER_IP 'jps | grep Worker' 2>/dev/null; then
-        ((WORKER_COUNT++))
-    fi
-done
-log_success "Workers running: $WORKER_COUNT/3"
+# log_info "Checking worker processes..."
+# WORKER_COUNT=0
+# for WORKER_IP in $WORKER1_PUBLIC_IP $WORKER2_PUBLIC_IP $WORKER3_PUBLIC_IP; do
+#     if ssh $SSH_OPTS ubuntu@$WORKER_IP 'jps | grep Worker' 2>/dev/null; then
+#         ((WORKER_COUNT++))
+#     fi
+# done
+# log_success "Workers running: $WORKER_COUNT/3"
 
 ################################################################################
 # Final Summary

@@ -1,0 +1,11 @@
+log_entry,log_level
+"17/03/29 10:04:44 INFO YarnAllocator: Launching ExecutorRunnable. driverUrl: spark://CoarseGrainedScheduler@10.10.34.11:48782,  executorHostname: mesos-slave-18",INFO
+"17/03/29 10:03:14 INFO spark.CacheManager: Partition rdd_2_0 not found, computing it",INFO
+17/03/29 10:03:23 INFO executor.Executor: Finished task 12.0 in stage 4.0 (TID 73). 2851 bytes result sent to driver,INFO
+17/03/29 10:04:56 INFO executor.Executor: Running task 13.0 in stage 2.0 (TID 33),INFO
+17/03/29 10:05:01 INFO executor.Executor: Finished task 7.0 in stage 7.0 (TID 127). 1197 bytes result sent to driver,INFO
+17/03/29 10:11:15 INFO spark.MapOutputTrackerWorker: Updating epoch to 1 and clearing cache,INFO
+17/03/29 10:04:08 INFO executor.CoarseGrainedExecutorBackend: Got assigned task 90,INFO
+17/03/29 10:02:38 INFO storage.BlockManager: BlockManager stopped,INFO
+17/03/29 09:55:34 INFO util.Utils: Successfully started service 'sparkExecutorActorSystem' on port 36686.,INFO
+17/03/29 10:05:12 INFO broadcast.TorrentBroadcast: Started reading broadcast variable 6,INFO
